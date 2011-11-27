@@ -267,7 +267,8 @@ public abstract class ACESentence extends AbstractSentence implements OWLSentenc
 					}
 				}
 			}
-			parserResult = ape.getMultiOutput(
+                        try {
+                            parserResult = ape.getMultiOutput(
 					getText(),
 					lexicon,
 					PARAPHRASE1,
@@ -277,6 +278,10 @@ public abstract class ACESentence extends AbstractSentence implements OWLSentenc
 					OWLFSSPP,
 					DRSPP
 				);
+                        } catch (RuntimeException re) {
+                            // TODO:
+                            throw(re);
+                        }
 		}
 		MessageContainer mc = parserResult.getMessageContainer();
 		String owlxml = parserResult.get(OWLXML);
