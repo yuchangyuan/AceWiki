@@ -39,7 +39,7 @@
   -->
   <context-param>
     <param-name>apecommand</param-name>
-    <param-value>ape.exe</param-value>
+    <param-value>data/acewiki/ape.exe</param-value>
   </context-param>
 
   <!--
@@ -74,7 +74,7 @@
   -->
   <context-param>
     <param-name>logdir</param-name>
-    <param-value>logs</param-value>
+    <param-value>data/acewiki/logs</param-value>
   </context-param>
   
   <!--
@@ -83,7 +83,7 @@
   -->
   <context-param>
     <param-name>datadir</param-name>
-    <param-value>data</param-value>
+    <param-value>data/acewiki/data</param-value>
   </context-param>
   
   
@@ -271,7 +271,7 @@
     -->
     <init-param>
       <param-name>lexicon</param-name>
-      <param-value>aceeditor_lexicon.pl</param-value>
+      <param-value>data/acewiki/aceeditor_lexicon.pl</param-value>
     </init-param>
     
     <!--
