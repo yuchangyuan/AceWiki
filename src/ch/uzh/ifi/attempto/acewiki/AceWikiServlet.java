@@ -15,6 +15,7 @@
 package ch.uzh.ifi.attempto.acewiki;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
@@ -101,6 +102,17 @@ public class AceWikiServlet extends WebContainerServlet {
 		if (showpageParam == null && pageParam != null && serviceidParam == null) {
 			response.sendRedirect(response.encodeRedirectURL("."));
 		}
+
+                // when url is '/api' or '/api/*'
+                String path = request.getPathInfo();
+                if ((path.equals("/api")) || (path.startsWith("/api/"))) {
+                    response.setContentType("text/plain");
+                    PrintWriter w = response.getWriter();
+                    w.println("path: " + path);
+                    w.println("method: " + request.getMethod());
+                    w.println("query: " + request.getQueryString());
+                    return;
+                }
 
 		try {
 			super.process(request, response);

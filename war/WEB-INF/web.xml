@@ -321,7 +321,7 @@
   -->
   <servlet-mapping>
     <servlet-name>AceWiki</servlet-name>
-    <url-pattern>/acewiki/</url-pattern>
+    <url-pattern>/acewiki/*</url-pattern>
   </servlet-mapping>
   
   <!--
