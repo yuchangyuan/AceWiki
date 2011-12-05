@@ -84,8 +84,8 @@ public class AceWikiServlet extends WebContainerServlet {
 
 		logger.log("appl", "new application instance: " + parameters.get("ontology"));
 
-        if (app == null) app = new AceWikiApp(parameters);
-        if (handler == null) handler = new Handler(parameters);
+        app = new AceWikiApp(parameters);
+        handler = new Handler(parameters);
 
         super.init(config);
     }
