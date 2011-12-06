@@ -161,7 +161,7 @@ public class Handler {
         ret.put("remain", can.remain);
         ret.put("candidates", can.candidates);
 
-        if (st.getCommit() && cna.complete) {
+        if (st.getCommit() && can.complete) {
             // TODO: commit
 
         }
