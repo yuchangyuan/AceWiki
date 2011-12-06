@@ -212,7 +212,7 @@ public class Handler {
         ret.remain = text;
         if (ret.remain.equals("")) {
             ret.valid = true;
-            ret.complete = pp.isComplete();
+            ret.complete = pp.isComplete() && (ret.tokens.size() > 0);
 
             if (!ret.complete) {
                 for (ConcreteOption o: pp.getNextTokenOptions().getConcreteOptions()) {
