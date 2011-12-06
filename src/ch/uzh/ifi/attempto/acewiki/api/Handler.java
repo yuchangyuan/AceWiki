@@ -22,12 +22,21 @@ import java.util.List;
 
 import com.google.gson.*;
 
+import ch.uzh.ifi.attempto.base.PredictiveParser;
+import ch.uzh.ifi.attempto.base.NextTokenOptions;
+import ch.uzh.ifi.attempto.base.ConcreteOption;
+
 import ch.uzh.ifi.attempto.acewiki.core.OntologyElement;
 import ch.uzh.ifi.attempto.acewiki.core.WordIndex;
 import ch.uzh.ifi.attempto.acewiki.core.Ontology;
 import ch.uzh.ifi.attempto.acewiki.core.AceWikiEngine;
 import ch.uzh.ifi.attempto.acewiki.core.AceWikiStorage;
 import ch.uzh.ifi.attempto.acewiki.core.FileBasedStorage;
+import ch.uzh.ifi.attempto.acewiki.core.StatementFactory;
+import ch.uzh.ifi.attempto.acewiki.core.Comment;
+import ch.uzh.ifi.attempto.acewiki.core.Article;
+import ch.uzh.ifi.attempto.acewiki.core.LanguageHandler;
+
 
 /**
  * This class is used by servlet to handle api call. The api is RESTful, use
@@ -56,6 +65,7 @@ public class Handler {
     private final Ontology ontology;
     private final AceWikiEngine engine;
     private final Backend backend;
+    private final StatementFactory sf;
 
     public AceWikiStorage getStorage() {
         return backend.getStorage();
@@ -70,6 +80,7 @@ public class Handler {
         parameters = backend.getParameters();
         ontology = backend.getOntology();
         engine = ontology.getEngine();
+        sf = ontology.getStatementFactory();
     }
 
     public Map<String,Object> list(String search) {
@@ -102,6 +113,15 @@ public class Handler {
         return addStatement(ontology.get(id), st);
     }
 
+    // calc position, return range 0 ~ size
+    public int calcPosition(int size, int pos) {
+        if (pos > size) return size;
+        if (pos >= 0) return pos;
+        if (pos < -size-1) return 0;
+        if (pos < 0) return size + 1 + pos;
+        return size;
+    }
+
     public Map<String, Object> addStatement(OntologyElement oe, Statement st) {
         Map<String, Object> ret = new HashMap();
 
@@ -109,6 +129,109 @@ public class Handler {
             ret.put("result", "error");
             ret.put("reason", "no such article.");
             return ret;
+        }
+
+        ret.put("position", new Long(-1));
+        ret.put("complete", true);
+        ret.put("candidates", new HashMap());
+        ret.put("valid", true);
+
+        // NOTE: thread safe
+        Article a = oe.getArticle();
+        List<ch.uzh.ifi.attempto.acewiki.core.Statement>
+            stList = a.getStatements();
+        // calc position
+        int pos = calcPosition(stList.size(), st.getPosition());
+
+        if (st.getComment()) {
+            if (st.getCommit()) {
+                // update position
+                ret.put("position", pos);
+                Comment c = sf.createComment(st.getStatement(), a);
+                a.add((pos < stList.size()) ? stList.get(pos) : null, c);
+            }
+
+            return ret;
+        }
+
+        Candidates can = getCandidates(st.getStatement());
+        ret.put("valid", can.valid);
+        ret.put("complete", can.complete);
+        ret.put("tokens", can.tokens);
+        ret.put("remain", can.remain);
+        ret.put("candidates", can.candidates);
+
+        if (st.getCommit() && cna.complete) {
+            // TODO: commit
+
+        }
+
+        return ret;
+    }
+
+    public static class Candidates {
+        boolean valid;
+        boolean complete;
+        List<String> tokens;
+        String remain;
+        Map<String, ArrayList<String>> candidates;
+
+        public Candidates() {
+            valid = true;
+            complete = false;
+            candidates = new HashMap();
+            tokens = new ArrayList();
+            remain = "";
+        }
+    };
+
+    // synchronized
+    public synchronized Candidates getCandidates(String text) {
+        LanguageHandler lh = engine.getLanguageHandler();
+        PredictiveParser pp = lh.getPredictiveParser();
+        pp.removeAllTokens();
+        return getCandidates(pp, lh.getTextOperator().splitIntoTokens(text));
+    }
+
+    // here, should not synchronized
+    private Candidates getCandidates(PredictiveParser pp, List<String> subtoks) {
+        Candidates ret = new Candidates();
+
+        String text = "";
+        while (subtoks.size() > 0) {
+            if (text.length() > 0) text += " ";
+            text += subtoks.remove(0);
+
+            if (pp.isPossibleNextToken(text)) {
+                pp.addToken(text);
+                ret.tokens.add(text);
+                text = "";
+            }
+        }
+
+        ret.remain = text;
+        if (ret.remain.equals("")) {
+            ret.valid = true;
+            ret.complete = pp.isComplete();
+
+            if (!ret.complete) {
+                for (ConcreteOption o: pp.getNextTokenOptions().getConcreteOptions()) {
+                    String cat = o.getCategoryName();
+                    String word = o.getWord();
+
+                    if (cat == null) {
+                        cat = "";
+                    }
+                    if (ret.candidates.get(cat) == null) {
+                        ret.candidates.put(cat, new ArrayList<String>());
+                    }
+                    ret.candidates.get(cat).add(word);
+                }
+            }
+        }
+        else {
+            ret.valid = false;
+            ret.complete = false;
         }
 
         return ret;

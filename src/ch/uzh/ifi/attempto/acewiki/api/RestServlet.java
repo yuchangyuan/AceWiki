@@ -163,10 +163,19 @@ public class RestServlet extends HttpServlet {
             r = new StringReader("");
         }
 
-        Statement st = gson.fromJson(r, Statement.class);
-        System.out.println("st: " + st.getStatement() +
-                           ", comment: " + st.getComment() +
-                           ", commit: " + st.getCommit());
+        Statement st = null;
+        try {
+            st = gson.fromJson(r, Statement.class);
+        }
+        catch (Exception e) {
+            output(resultError(e.getMessage()), res);
+            return;
+        }
+
+        if ((st == null) || (st.getStatement() == null)) {
+            output(resultError("missing statement."), res);
+            return;
+        }
 
         // get id or word
         String a = path.get(0);

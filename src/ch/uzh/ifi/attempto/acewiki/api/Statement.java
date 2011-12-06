@@ -17,18 +17,21 @@ public class Statement {
     private final String statement;
     private final boolean comment;
     private final boolean commit;
+    private final int position;
 
     public Statement() {
-        this("", false, false);
+        this(null, false, false, -1);
     }
 
-    public Statement(String s, boolean c0, boolean c1) {
+    public Statement(String s, boolean c0, boolean c1, int p) {
         this.statement = s;
         this.comment = c0;
         this.commit = c1;
+        this.position = p;
     }
 
     public String getStatement() { return statement; }
     public boolean getComment() { return comment; }
     public boolean getCommit() { return commit; }
+    public int getPosition() { return position; }
 }
