@@ -104,7 +104,38 @@
       This argument points to the servlet class.
     -->
     <servlet-class>ch.uzh.ifi.attempto.acewiki.AceWikiServlet</servlet-class>
-    
+
+    <!--
+        Should load after 'backend' servlet.
+    -->
+    <load-on-startup>2</load-on-startup>    
+
+    <init-param>
+      <param-name>backend</param-name>
+      <param-value>rest1</param-value>
+    </init-param>
+  </servlet>
+  
+  <!--
+    You can have several servlet definitions of the same servlet class within a single web.xml
+    file. The code below launches a second AceWiki instance.
+  -->
+  <servlet>
+    <servlet-name>AceWiki2</servlet-name>
+    <servlet-class>ch.uzh.ifi.attempto.acewiki.AceWikiServlet</servlet-class>
+    <load-on-startup>2</load-on-startup>
+    <init-param>
+      <param-name>backend</param-name>
+      <param-value>rest2</param-value>
+    </init-param>
+  </servlet>
+  
+
+  <servlet>
+    <servlet-name>rest1</servlet-name>
+    <servlet-class>ch.uzh.ifi.attempto.acewiki.api.RestServlet</servlet-class>
+    <load-on-startup>1</load-on-startup>
+
     <!--
       The parameter 'ontology' is mandatory and specifies the name of the ontology. This name is
       used in the URIs of the OWL statements and for the file names on the server. Several servlet
@@ -228,16 +259,13 @@
       <param-name>readonly</param-name>
       <param-value>off</param-value>
     </init-param>
-    
   </servlet>
-  
-  <!--
-    You can have several servlet definitions of the same servlet class within a single web.xml
-    file. The code below launches a second AceWiki instance.
-  -->
+
+
   <servlet>
-    <servlet-name>AceWiki2</servlet-name>
-    <servlet-class>ch.uzh.ifi.attempto.acewiki.AceWikiServlet</servlet-class>
+    <servlet-name>rest2</servlet-name>
+    <servlet-class>ch.uzh.ifi.attempto.acewiki.api.RestServlet</servlet-class>
+    <load-on-startup>1</load-on-startup>
     <init-param>
       <param-name>ontology</param-name>
       <param-value>anothertest</param-value>
@@ -247,7 +275,6 @@
       <param-value>http://attempto.ifi.uzh.ch/acewiki/</param-value>
     </init-param>
   </servlet>
-  
   
   <!--
     The following is an exemplary servlet definition for an ACE Editor instance.
@@ -263,7 +290,7 @@
       This argument points to the servlet class.
     -->
     <servlet-class>ch.uzh.ifi.attempto.aceeditor.ACEEditorServlet</servlet-class>
-    
+
     <!--
       The parameter 'lexicon' points to the lexicon file that should be loaded. This file should be
       formatted according to the ACE Lexicon Specification (see
@@ -321,7 +348,7 @@
   -->
   <servlet-mapping>
     <servlet-name>AceWiki</servlet-name>
-    <url-pattern>/acewiki/*</url-pattern>
+    <url-pattern>/acewiki/</url-pattern>
   </servlet-mapping>
   
   <!--
@@ -340,4 +367,15 @@
     <url-pattern>/aceeditor/</url-pattern>
   </servlet-mapping>
   
+
+  <servlet-mapping>
+    <servlet-name>rest1</servlet-name>
+    <url-pattern>/api/*</url-pattern>
+  </servlet-mapping>
+
+  <servlet-mapping>
+    <servlet-name>rest2</servlet-name>
+    <url-pattern>/api2/*</url-pattern>
+  </servlet-mapping>
+
 </web-app>

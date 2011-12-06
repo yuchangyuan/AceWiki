@@ -13,12 +13,7 @@
 
 package ch.uzh.ifi.attempto.acewiki.api;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import java.io.IOException;
-import java.io.PrintWriter;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -33,7 +28,6 @@ import ch.uzh.ifi.attempto.acewiki.core.Ontology;
 import ch.uzh.ifi.attempto.acewiki.core.AceWikiEngine;
 import ch.uzh.ifi.attempto.acewiki.core.AceWikiStorage;
 import ch.uzh.ifi.attempto.acewiki.core.FileBasedStorage;
-import ch.uzh.ifi.attempto.acewiki.Wiki;
 
 /**
  * This class is used by servlet to handle api call. The api is RESTful, use
@@ -58,55 +52,27 @@ import ch.uzh.ifi.attempto.acewiki.Wiki;
  *   + the same as add sentence.
  */
 public class Handler {
-    private Wiki wiki;
-    private Map<String, String> parameters;
+    private final Map<String, String> parameters;
     private final Ontology ontology;
     private final AceWikiEngine engine;
-    private static AceWikiStorage storage;
+    private final Backend backend;
 
-    private Gson gson;
-    static String res_ok = "{\"result\":\"ok\"}";
-    static String res_error = "{\"result\":\"error\", \"reason\":\"unknown\"}";
+    public AceWikiStorage getStorage() {
+        return backend.getStorage();
+    }
 
-    public Handler(Map<String, String> parameters) {
-        this.parameters = parameters;
+    public Ontology getOntology() {
+        return ontology;
+    }
 
-        if (storage == null) {
-            storage = new FileBasedStorage(parameters.get("context:datadir"));
-        }
-
-        ontology = storage.getOntology(parameters.get("ontology"), parameters);
+    public Handler(Backend backend) {
+        this.backend = backend;
+        parameters = backend.getParameters();
+        ontology = backend.getOntology();
         engine = ontology.getEngine();
-
-        gson = new GsonBuilder().setPrettyPrinting().create();
     }
 
-    public void process(HttpServletRequest req, HttpServletResponse res) throws
-        IOException, ServletException {
-        String json = res_error;
-        ArrayList<String> path = new ArrayList();
-        for (String s: req.getPathInfo().split("/")) {
-            if (!s.equals("")) { path.add(s); }
-        }
-        if (path.size() > 0) {
-            if (path.get(0).equals("api")) path.remove(0);
-        }
-        String method = req.getMethod();
-
-        if (method == "GET") {
-            json = doGet(path, req.getParameterMap());
-        }
-        else if (method == "POST") {
-            // TODO
-        }
-        else if (method == "PUT") {
-            // TODO
-        }
-        PrintWriter w = res.getWriter();
-        w.write(json);
-    }
-
-    public String list(String search) {
+    public Map<String,Object> list(String search) {
         List<OntologyElement> elemList;
         if (search != null) {
             WordIndex index = engine.getWordIndex();
@@ -117,33 +83,32 @@ public class Handler {
         }
 
         // return { id : { word: [string], type: string } }
-        HashMap<Long, Object> ret = new HashMap();
+        HashMap<String, Object> ret = new HashMap();
         for (OntologyElement e: elemList) {
             HashMap<String, Object> w = new HashMap();
             w.put("word", e.getWords());
             w.put("type", e.getType());
-            ret.put(e.getId(), w);
+            ret.put(new Long(e.getId()).toString(), w);
         }
-        return gson.toJson(ret);
+        return ret;
     }
 
-    public String doGet(ArrayList<String> path, Map<String, String[]> params) {
-        String ret = res_error;
-        //System.out.println("path=" + path);
 
-        switch (path.size()) {
-        case 0:
-            String[] vals = params.get("search");
-            if (vals == null) {
-                ret = list(null);
-            }
-            else {
-                ret = list(vals[0]);
-            }
-            break;
-        case 1:
-            // TODO;
-            break;
+    public Map<String, Object> addStatement(String word, Statement st) {
+        return addStatement(ontology.getElement(word), st);
+    }
+
+    public Map<String, Object> addStatement(long id, Statement st) {
+        return addStatement(ontology.get(id), st);
+    }
+
+    public Map<String, Object> addStatement(OntologyElement oe, Statement st) {
+        Map<String, Object> ret = new HashMap();
+
+        if (oe == null) {
+            ret.put("result", "error");
+            ret.put("reason", "no such article.");
+            return ret;
         }
 
         return ret;

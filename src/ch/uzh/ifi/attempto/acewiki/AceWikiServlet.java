@@ -30,7 +30,7 @@ import nextapp.echo.webcontainer.WebContainerServlet;
 import ch.uzh.ifi.attempto.base.Logger;
 import ch.uzh.ifi.attempto.base.APE;
 
-import ch.uzh.ifi.attempto.acewiki.api.Handler;
+import ch.uzh.ifi.attempto.acewiki.api.Backend;
 
 /**
  * This servlet class is used by the web server to start AceWiki.
@@ -52,8 +52,8 @@ public class AceWikiServlet extends WebContainerServlet {
 	private static final long serialVersionUID = -7342857942059126499L;
 
 	private Logger logger;
-    private Handler handler;
-    private AceWikiApp app;
+    private Backend backend;
+    private Map<String, String> parameters;
 
 	/**
 	 * Creates a new AceWiki servlet object.
@@ -61,37 +61,37 @@ public class AceWikiServlet extends WebContainerServlet {
 	public AceWikiServlet() {
 	}
 
+    // init
     public void init(ServletConfig config) throws ServletException {
-		Map<String, String> parameters = getInitParameters(config);
+        String backendName = config.getInitParameter("backend");
+        System.out.println("AceWiki init with backend: " + backendName);
 
-		if (parameters.get("context:apecommand") == null) {
-			parameters.put("context:apecommand", "ape.exe");
-		}
+        while (true) {
+            backend = (Backend) config.getServletContext().getAttribute(backendName);
+            if (backend != null) break;
+            try {
+                Thread.sleep(1000);
+            }
+            catch (InterruptedException e) {
+                break;
+            }
+        }
 
-		if (parameters.get("context:logdir") == null) {
-			parameters.put("context:logdir", "logs");
-		}
-
-		if (parameters.get("context:datadir") == null) {
-			parameters.put("context:datadir", "data");
-		}
+        System.out.println("get backend " + backend);
+        parameters = backend.getParameters();
 
         APE.setParameters(parameters);
-
-		if (logger == null) {
-			logger = new Logger(parameters.get("context:logdir") + "/syst", "syst", 0);
-		}
-
-		logger.log("appl", "new application instance: " + parameters.get("ontology"));
-
-        app = new AceWikiApp(parameters);
-        handler = new Handler(parameters);
 
         super.init(config);
     }
 
 	public ApplicationInstance newApplicationInstance() {
-		return app;
+        if (logger == null) {
+            logger = new Logger(parameters.get("context:logdir") + "/syst", "syst", 0);
+        }
+
+        logger.log("appl", "new application instance: " + parameters.get("ontology"));
+        return new AceWikiApp(backend);
 	}
 
 	protected void process(HttpServletRequest request, HttpServletResponse response) throws
@@ -115,15 +115,8 @@ public class AceWikiServlet extends WebContainerServlet {
 			response.sendRedirect(response.encodeRedirectURL("."));
 		}
 
-        String path = request.getPathInfo();
-
 		try {
-            // when url is '/api' or '/api/*'
-            if ((path.equals("/api")) || (path.startsWith("/api/"))) {
-                handler.process(request, response);
-            } else {
-                super.process(request, response);
-            }
+            super.process(request, response);
 		} catch (RuntimeException ex) {
 			logger.log("fail", "fatal error: " + ex);
 			ex.printStackTrace();
@@ -137,22 +130,6 @@ public class AceWikiServlet extends WebContainerServlet {
 			ex.printStackTrace();
 			throw ex;
 		}
-	}
-
-	@SuppressWarnings("rawtypes")
-	private Map<String, String> getInitParameters(ServletConfig config) {
-		Map<String, String> initParameters = new HashMap<String, String>();
-		Enumeration paramEnum = config.getInitParameterNames();
-		while (paramEnum.hasMoreElements()) {
-			String n = paramEnum.nextElement().toString();
-			initParameters.put(n, config.getInitParameter(n));
-		}
-		Enumeration contextParamEnum = config.getServletContext().getInitParameterNames();
-		while (contextParamEnum.hasMoreElements()) {
-			String n = contextParamEnum.nextElement().toString();
-			initParameters.put("context:" + n, config.getServletContext().getInitParameter(n));
-		}
-		return initParameters;
 	}
 
 }
