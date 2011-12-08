@@ -25,6 +25,8 @@ import com.google.gson.*;
 import ch.uzh.ifi.attempto.base.PredictiveParser;
 import ch.uzh.ifi.attempto.base.NextTokenOptions;
 import ch.uzh.ifi.attempto.base.ConcreteOption;
+import ch.uzh.ifi.attempto.base.TextContainer;
+import ch.uzh.ifi.attempto.base.TextElement;
 
 import ch.uzh.ifi.attempto.acewiki.core.OntologyElement;
 import ch.uzh.ifi.attempto.acewiki.core.WordIndex;
@@ -35,6 +37,7 @@ import ch.uzh.ifi.attempto.acewiki.core.FileBasedStorage;
 import ch.uzh.ifi.attempto.acewiki.core.StatementFactory;
 import ch.uzh.ifi.attempto.acewiki.core.Comment;
 import ch.uzh.ifi.attempto.acewiki.core.Article;
+import ch.uzh.ifi.attempto.acewiki.core.Sentence;
 import ch.uzh.ifi.attempto.acewiki.core.LanguageHandler;
 
 
@@ -46,19 +49,23 @@ import ch.uzh.ifi.attempto.acewiki.core.LanguageHandler;
  * API(draft):
  * - list pages or search page P: GET / or GET /?search=P
  * - get main page or any article A(A is string or int): GET /0 or GET /A
- *   + will return a list of sentence with id
+ *   + will return a list of statement with id or word.
  * - create word W: PUT /W
  *   + { 'category':string, ... }
- * - add sentence on page P: POST /P
+ * - add statement on page P: POST /P
  *   + { 'statement':string, 'comment': bool, 'commit': bool }
  *     - 'commit' is optional, when ommit, is false.
+ *     - 'comment' is optional, when ommit, is false.
  *   + return
  *     - complete: bool
  *     - candidate: { category: [string] }
- *     - id: int, when sentence commit to article, or -1
- * - delete sentence Id on page P: DELETE /P/Id
- * - modify sentence Id on page P: PUT /P/Id
- *   + the same as add sentence.
+ *     - valid: whether statement is valid sentence.
+ *     - tokens: valid token list of the sentence.
+ *     - remain: remain of the sentence which can not parse.
+ *     - position: int, position in article when commit, or -1
+ * - delete statement with position Pos on page P: DELETE /P/Pos
+ * - modify statement with position Pos on page P: PUT /P/Pos
+ *   + the same as add statement.
  */
 public class Handler {
     private final Map<String, String> parameters;
@@ -136,7 +143,7 @@ public class Handler {
         ret.put("candidates", new HashMap());
         ret.put("valid", true);
 
-        // NOTE: thread safe
+        // NOTE: thread safe, article position might change
         Article a = oe.getArticle();
         List<ch.uzh.ifi.attempto.acewiki.core.Statement>
             stList = a.getStatements();
@@ -161,12 +168,44 @@ public class Handler {
         ret.put("remain", can.remain);
         ret.put("candidates", can.candidates);
 
-        if (st.getCommit() && can.complete) {
-            // TODO: commit
-
+        if (st.getCommit()) {
+            if (!can.complete) {
+                ret.put("result", "error");
+                ret.put("reason", "sentence not complete.");
+            }
+            else if (!can.valid) {
+                ret.put("result", "error");
+                ret.put("reason", "sentence not valid.");
+            }
+            else {
+                ret.put("position", pos);
+                commitSentence(a, (pos < stList.size()) ? stList.get(pos) : null,
+                               can.tokens);
+            }
         }
 
         return ret;
+    }
+
+    private void commitSentence(Article a,
+                                ch.uzh.ifi.attempto.acewiki.core.Statement st,
+                                List<String> tokens) {
+        LanguageHandler lh = engine.getLanguageHandler();
+        PredictiveParser pp = lh.getPredictiveParser();
+        TextContainer tc = new TextContainer();
+        tc.setTextOperator(lh.getTextOperator());
+
+        pp.removeAllTokens();
+
+        for (String tok: tokens) {
+            pp.addToken(tok);
+            tc.addElement(tc.getTextOperator().createTextElement(tok));
+        }
+
+        List<Sentence> sl = sf.extractSentences(tc, pp, a);
+        if (sl.size() > 0) {
+            a.add(st, sl.get(0));
+        }
     }
 
     public static class Candidates {
@@ -194,6 +233,8 @@ public class Handler {
     }
 
     // here, should not synchronized
+    // TODO: fix bug, this function should recursively
+    //       for example, 'an apple has a color of red.' will stop at 'of'.
     private Candidates getCandidates(PredictiveParser pp, List<String> subtoks) {
         Candidates ret = new Candidates();
 
