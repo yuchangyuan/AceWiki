@@ -93,11 +93,11 @@ public class Handler {
             elemList = ontology.getOntologyElements();
         }
 
-        // return { id : { word: [string], type: string } }
+        // return { id : { words: [string], type: string } }
         HashMap<String, Object> ret = new HashMap();
         for (OntologyElement e: elemList) {
             HashMap<String, Object> w = new HashMap();
-            w.put("word", e.getWords());
+            w.put("words", e.getWords());
             w.put("type", e.getType());
             ret.put(new Long(e.getId()).toString(), w);
         }
