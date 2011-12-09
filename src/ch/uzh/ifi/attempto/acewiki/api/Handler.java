@@ -224,6 +224,24 @@ public class Handler {
         }
     };
 
+    public static class ParseResult {
+        private List<String> tokens;
+        private List<String> subtokens;
+
+        public ParseResult(List<String> tokens, List<String> subtokens) {
+            this.tokens = tokens;
+            this.subtokens = subtokens;
+        }
+
+        public List<String> getTokens() { return tokens; }
+        public List<String> getSubtokens() { return subtokens; }
+
+        @Override public ParseResult clone() {
+            return new ParseResult(new ArrayList(tokens),
+                                   new ArrayList(subtokens));
+        }
+    }
+
     // synchronized
     public synchronized Candidates getCandidates(String text) {
         LanguageHandler lh = engine.getLanguageHandler();
@@ -236,9 +254,11 @@ public class Handler {
     private Candidates getCandidates(PredictiveParser pp, List<String> subtoks) {
         Candidates ret = new Candidates();
 
-        List<String> subtoks1 = parseAsFarAsPossible(pp, subtoks);
+        ParseResult pr = new ParseResult(new ArrayList<String>(), subtoks);
+        pr = parseAsFarAsPossible(pp, pr);
 
         ret.remain = "";
+        List<String> subtoks1 = pr.getSubtokens();
         if (subtoks1.size() > 0) {
             ret.remain = subtoks1.remove(0);
             while (subtoks1.size() > 0) {
@@ -246,10 +266,12 @@ public class Handler {
             }
         }
 
-        ret.tokens = pp.getTokens();
+        ret.tokens = pr.getTokens();
 
         if (ret.remain.equals("")) {
             ret.valid = true;
+            // after parseAsFarAsPossible, pp is still empty
+            pp.setTokens(ret.tokens);
             ret.complete = pp.isComplete() && (ret.tokens.size() > 0);
 
             if (!ret.complete) {
@@ -275,41 +297,41 @@ public class Handler {
         return ret;
     }
 
-    // recursive function, parse subtoks as far as possible
-    // 1. already parsed tokens is store in pp.
-    // 2. subtoks is the tokens to be parse.
-    // 3. return the subtoks that can not parse.
-    // the function search deep first.
-    private List<String> parseAsFarAsPossible(PredictiveParser pp,
-                                              List<String> subtoks) {
-        String text = "";
-        List<String> retSubtoks = new ArrayList<String>(subtoks); // return subtokens
-        List<String> retToks = new ArrayList<String>(pp.getTokens()); // return tokens
 
+    private ParseResult parseAsFarAsPossible(PredictiveParser pp,
+                                             ParseResult pr) {
+        NextTokenOptions opts = pp.getNextTokenOptions();
+        List<ParseResult> nextResultList = new ArrayList<ParseResult>();
+        String text = "";
+
+        // find all candidates once, avoid re-cache of NextTokenOptions.
+        List<String> subtoks = new ArrayList(pr.getSubtokens());
         while (subtoks.size() > 0) {
             if (text.length() > 0) text += " ";
             text += subtoks.remove(0);
 
-            if (pp.isPossibleNextToken(text)) {
-                List<String> toks = pp.getTokens(); // save current tokens
-
-                pp.addToken(text);
-                List<String> subtoks1 =
-                    parseAsFarAsPossible(pp, new ArrayList<String>(subtoks));
-
-                if (subtoks1.size() < retSubtoks.size()) {
-                    retSubtoks = subtoks1;
-                    retToks = new ArrayList<String>(pp.getTokens());
-                }
-
-                // restore pp
-                pp.setTokens(toks);
+            if (opts.containsToken(text)) {
+                List<String> toks1 = new ArrayList(pr.getTokens());
+                toks1.add(text);
+                nextResultList.add(new ParseResult(toks1, new ArrayList(subtoks)));
             }
         }
 
-        pp.setTokens(retToks);
-        return retSubtoks;
-    }
+        // iterate in nextResultList
+        ParseResult pr1 = pr.clone();
 
+        for (ParseResult i: nextResultList) {
+            List<String> toks = i.getTokens();
+            // avoid use pp.setTokens, which slow
+            pp.addToken(toks.get(toks.size() - 1));
+            ParseResult r = parseAsFarAsPossible(pp, i);
+            pp.removeToken();
+            if (r.getSubtokens().size() < pr1.getSubtokens().size()) {
+                pr1 = r;
+            }
+        }
+
+        return pr1;
+    }
 }
 
