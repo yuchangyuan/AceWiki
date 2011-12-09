@@ -13,17 +13,17 @@
 
 package ch.uzh.ifi.attempto.acewiki.api;
 
-public class Statement {
+public class RestStatement {
     private final String statement;
     private final boolean comment;
     private final boolean commit;
     private final int position;
 
-    public Statement() {
+    public RestStatement() {
         this(null, false, false, -1);
     }
 
-    public Statement(String s, boolean c0, boolean c1, int p) {
+    public RestStatement(String s, boolean c0, boolean c1, int p) {
         this.statement = s;
         this.comment = c0;
         this.commit = c1;

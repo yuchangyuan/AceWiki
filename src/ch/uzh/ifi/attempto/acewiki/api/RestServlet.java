@@ -163,9 +163,9 @@ public class RestServlet extends HttpServlet {
             r = new StringReader("");
         }
 
-        Statement st = null;
+        RestStatement st = null;
         try {
-            st = gson.fromJson(r, Statement.class);
+            st = gson.fromJson(r, RestStatement.class);
         }
         catch (Exception e) {
             output(resultError(e.getMessage()), res);

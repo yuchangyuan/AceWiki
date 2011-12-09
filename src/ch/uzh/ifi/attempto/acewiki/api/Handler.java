@@ -35,6 +35,7 @@ import ch.uzh.ifi.attempto.acewiki.core.AceWikiEngine;
 import ch.uzh.ifi.attempto.acewiki.core.AceWikiStorage;
 import ch.uzh.ifi.attempto.acewiki.core.FileBasedStorage;
 import ch.uzh.ifi.attempto.acewiki.core.StatementFactory;
+import ch.uzh.ifi.attempto.acewiki.core.Statement;
 import ch.uzh.ifi.attempto.acewiki.core.Comment;
 import ch.uzh.ifi.attempto.acewiki.core.Article;
 import ch.uzh.ifi.attempto.acewiki.core.Sentence;
@@ -112,11 +113,11 @@ public class Handler {
     }
 
 
-    public Map<String, Object> addStatement(String word, Statement st) {
+    public Map<String, Object> addStatement(String word, RestStatement st) {
         return addStatement(ontology.getElement(word), st);
     }
 
-    public Map<String, Object> addStatement(long id, Statement st) {
+    public Map<String, Object> addStatement(long id, RestStatement st) {
         return addStatement(ontology.get(id), st);
     }
 
@@ -129,7 +130,7 @@ public class Handler {
         return size;
     }
 
-    public Map<String, Object> addStatement(OntologyElement oe, Statement st) {
+    public Map<String, Object> addStatement(OntologyElement oe, RestStatement st) {
         Map<String, Object> ret = new HashMap();
 
         if (oe == null) {
@@ -145,8 +146,7 @@ public class Handler {
 
         // NOTE: thread safe, article position might change
         Article a = oe.getArticle();
-        List<ch.uzh.ifi.attempto.acewiki.core.Statement>
-            stList = a.getStatements();
+        List<Statement> stList = a.getStatements();
         // calc position
         int pos = calcPosition(stList.size(), st.getPosition());
 
@@ -187,9 +187,7 @@ public class Handler {
         return ret;
     }
 
-    private void commitSentence(Article a,
-                                ch.uzh.ifi.attempto.acewiki.core.Statement st,
-                                List<String> tokens) {
+    private void commitSentence(Article a, Statement st, List<String> tokens) {
         LanguageHandler lh = engine.getLanguageHandler();
         PredictiveParser pp = lh.getPredictiveParser();
         TextContainer tc = new TextContainer();
