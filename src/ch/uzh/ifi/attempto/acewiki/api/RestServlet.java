@@ -94,24 +94,16 @@ public class RestServlet extends HttpServlet {
         System.out.println("AceWiki backend " + name + " init ok.");
     }
 
-    public Map<String, Object> resultError(String reason) {
-        Map<String, Object> json = new HashMap();
-        json.put("result", "error");
-        json.put("reason", reason);
-        return json;
+    public RestResult resultError(String reason) {
+        return new RestResult(reason);
     }
 
-    public Map<String, Object> resultError() {
+    public RestResult resultError() {
         return resultError("unknow");
     }
 
-    private void output(Map<String, Object> json, HttpServletResponse res) throws
+    private void output(RestResult json, HttpServletResponse res) throws
         IOException, ServletException {
-        // if result is not set, then set to ok
-        if (json.get("result") == null) {
-            json.put("result", "ok");
-        }
-
         PrintWriter w = res.getWriter();
         w.write(gson.toJson(json));
     }
@@ -132,7 +124,7 @@ public class RestServlet extends HttpServlet {
 
     public void doGet(HttpServletRequest req, HttpServletResponse res) throws
         IOException, ServletException {
-        Map <String, Object> json = resultError();
+        RestResult json = resultError();
         ArrayList<String> path = splitPath(req);
 
         switch (path.size()) {
@@ -150,7 +142,7 @@ public class RestServlet extends HttpServlet {
     public void doPost(HttpServletRequest req, HttpServletResponse res) throws
         IOException, ServletException {
         ArrayList<String> path = splitPath(req);
-        Map<String, Object> json = resultError();
+        RestResult json = resultError();
 
         if (path.size() != 1) {
             output(resultError("path error."), res);

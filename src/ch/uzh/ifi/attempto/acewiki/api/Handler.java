@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Arrays;
 
 import com.google.gson.*;
 
@@ -91,7 +92,7 @@ public class Handler {
         sf = ontology.getStatementFactory();
     }
 
-    public Map<String,Object> list(String search) {
+    public RestResult list(String search) {
         List<OntologyElement> elemList;
         if (search != null) {
             WordIndex index = engine.getWordIndex();
@@ -102,22 +103,22 @@ public class Handler {
         }
 
         // return { id : { words: [string], type: string } }
-        HashMap<String, Object> ret = new HashMap();
+        RestListResult ret = new RestListResult();
         for (OntologyElement e: elemList) {
-            HashMap<String, Object> w = new HashMap();
-            w.put("words", e.getWords());
-            w.put("type", e.getType());
-            ret.put(new Long(e.getId()).toString(), w);
+            List<String> words =
+                new ArrayList<String>(Arrays.asList(e.getWords()));
+            ret.addArticle(e.getId(), words, e.getType());
         }
+
         return ret;
     }
 
 
-    public Map<String, Object> addStatement(String word, RestStatement st) {
+    public RestResult addStatement(String word, RestStatement st) {
         return addStatement(ontology.getElement(word), st);
     }
 
-    public Map<String, Object> addStatement(long id, RestStatement st) {
+    public RestResult addStatement(long id, RestStatement st) {
         return addStatement(ontology.get(id), st);
     }
 
@@ -130,19 +131,17 @@ public class Handler {
         return size;
     }
 
-    public Map<String, Object> addStatement(OntologyElement oe, RestStatement st) {
-        Map<String, Object> ret = new HashMap();
+    public RestResult addStatement(OntologyElement oe, RestStatement st) {
+        RestStatementResult ret = new RestStatementResult();
 
         if (oe == null) {
-            ret.put("result", "error");
-            ret.put("reason", "no such article.");
+            ret.setError("no such article.");
             return ret;
         }
 
-        ret.put("position", new Long(-1));
-        ret.put("complete", true);
-        ret.put("candidates", new HashMap());
-        ret.put("valid", true);
+        ret.setPosition(-1);
+        ret.setComplete(true);
+        ret.setValid(true);
 
         // NOTE: thread safe, article position might change
         Article a = oe.getArticle();
@@ -153,7 +152,7 @@ public class Handler {
         if (st.getComment()) {
             if (st.getCommit()) {
                 // update position
-                ret.put("position", pos);
+                ret.setPosition(pos);
                 Comment c = sf.createComment(st.getStatement(), a);
                 a.add((pos < stList.size()) ? stList.get(pos) : null, c);
             }
@@ -161,32 +160,24 @@ public class Handler {
             return ret;
         }
 
-        Candidates can;
         if (st.getTokens() != null) {
-            can = getCandidates(st.getTokens());
+            getCandidates(st.getTokens(), ret);
         }
         else {
-            can = getCandidates(st.getStatement());
+            getCandidates(st.getStatement(), ret);
         }
-        ret.put("valid", can.valid);
-        ret.put("complete", can.complete);
-        ret.put("tokens", can.tokens);
-        ret.put("remain", can.remain);
-        ret.put("candidates", can.candidates);
 
         if (st.getCommit()) {
-            if (!can.complete) {
-                ret.put("result", "error");
-                ret.put("reason", "sentence not complete.");
+            if (!ret.isComplete()) {
+                ret.setError("sentence not complete.");
             }
-            else if (!can.valid) {
-                ret.put("result", "error");
-                ret.put("reason", "sentence not valid.");
+            else if (!ret.isValid()) {
+                ret.setError("sentence not valid.");
             }
             else {
-                ret.put("position", pos);
+                ret.setPosition(pos);
                 commitSentence(a, (pos < stList.size()) ? stList.get(pos) : null,
-                               can.tokens);
+                               ret.getTokens());
             }
         }
 
@@ -212,22 +203,6 @@ public class Handler {
         }
     }
 
-    public static class Candidates {
-        boolean valid;
-        boolean complete;
-        List<String> tokens;
-        String remain;
-        Map<String, ArrayList<String>> candidates;
-
-        public Candidates() {
-            valid = true;
-            complete = false;
-            candidates = new HashMap();
-            tokens = new ArrayList();
-            remain = "";
-        }
-    };
-
     public static class ParseResult {
         private List<String> tokens;
         private List<String> subtokens;
@@ -246,74 +221,76 @@ public class Handler {
         }
     }
 
-    public synchronized Candidates getCandidates(List<String> tokens) {
+    public synchronized void getCandidates(List<String> tokens,
+                                           RestStatementResult ret) {
         LanguageHandler lh = engine.getLanguageHandler();
         PredictiveParser pp = lh.getPredictiveParser();
         pp.removeAllTokens();
 
+        String remain = "";
+
         List<String> list = new ArrayList(tokens);
-        Candidates ret = new Candidates();
         while (list.size() > 0) {
             String tok = list.remove(0);
             if (!pp.isPossibleNextToken(tok)) {
+                remain = tok;
                 break;
             }
             pp.addToken(tok);
         }
 
-        ret.remain = "";
         while (list.size() > 0) {
-            if (ret.remain.length() > 0) ret.remain += " ";
-            ret.remain += list.remove(0);
+            if (remain.length() > 0) remain += " ";
+            remain += list.remove(0);
         }
+        ret.setRemain(remain);
 
         updateCandidates(pp, ret);
-
-        return ret;
     }
 
     // synchronized
-    public synchronized Candidates getCandidates(String text) {
+    public synchronized void getCandidates(String text,
+                                           RestStatementResult ret) {
         LanguageHandler lh = engine.getLanguageHandler();
         PredictiveParser pp = lh.getPredictiveParser();
         pp.removeAllTokens();
-        return getCandidates(pp, lh.getTextOperator().splitIntoTokens(text));
+        getCandidates(pp, lh.getTextOperator().splitIntoTokens(text), ret);
     }
 
     // here, should not synchronized
-    private Candidates getCandidates(PredictiveParser pp, List<String> subtoks) {
-        Candidates ret = new Candidates();
-
+    private void getCandidates(PredictiveParser pp,
+                                     List<String> subtoks,
+                                     RestStatementResult ret) {
         ParseResult pr = new ParseResult(new ArrayList<String>(), subtoks);
         pr = parseAsFarAsPossible(pp, pr);
 
-        ret.remain = "";
+        String remain = "";
         List<String> subtoks1 = pr.getSubtokens();
         if (subtoks1.size() > 0) {
-            ret.remain = subtoks1.remove(0);
+            remain = subtoks1.remove(0);
             while (subtoks1.size() > 0) {
-                ret.remain += " " + subtoks1.remove(0);
+                remain += " " + subtoks1.remove(0);
             }
         }
+        ret.setRemain(remain);
 
         // after parseAsFarAsPossible, pp is still empty
         pp.setTokens(pr.getTokens());
 
         updateCandidates(pp, ret);
-
-        return ret;
     }
 
     // all tokens should already in pp, and tokens and remain
     // are setted in can.
-    private void updateCandidates(PredictiveParser pp, Candidates can) {
-        can.tokens = pp.getTokens();
+    private void updateCandidates(PredictiveParser pp, RestStatementResult ret) {
+        ret.setTokens(pp.getTokens());
 
-        if (can.remain.equals("")) {
-            can.valid = true;
-            can.complete = pp.isComplete() && (can.tokens.size() > 0);
+        if (ret.getRemain().equals("")) {
+            ret.setValid(true);
+            ret.setComplete(pp.isComplete() && (ret.getTokens().size() > 0));
 
-            if (!can.complete) {
+            if (!ret.isComplete()) {
+                Map<String, List<String>> can = new HashMap();
                 for (ConcreteOption o: pp.getNextTokenOptions().getConcreteOptions()) {
                     String cat = o.getCategoryName();
                     String word = o.getWord();
@@ -321,16 +298,17 @@ public class Handler {
                     if (cat == null) {
                         cat = "";
                     }
-                    if (can.candidates.get(cat) == null) {
-                        can.candidates.put(cat, new ArrayList<String>());
+                    if (can.get(cat) == null) {
+                        can.put(cat, new ArrayList<String>());
                     }
-                    can.candidates.get(cat).add(word);
+                    can.get(cat).add(word);
                 }
+                ret.setCandidates(can);
             }
         }
         else {
-            can.valid = false;
-            can.complete = false;
+            ret.setValid(false);
+            ret.setComplete(false);
         }
     }
 
