@@ -12,25 +12,30 @@
 // not, see http://www.gnu.org/licenses/.
 
 package ch.uzh.ifi.attempto.acewiki.api;
+import java.util.List;
 
 public class RestStatement {
     private final String statement;
+    private final List<String> tokens;
     private final boolean comment;
     private final boolean commit;
     private final int position;
 
     public RestStatement() {
-        this(null, false, false, -1);
+        this(null, null, false, false, -1);
     }
 
-    public RestStatement(String s, boolean c0, boolean c1, int p) {
+    public RestStatement(String s, List<String> t,
+                         boolean c0, boolean c1, int p) {
         this.statement = s;
+        this.tokens = t;
         this.comment = c0;
         this.commit = c1;
         this.position = p;
     }
 
     public String getStatement() { return statement; }
+    public List<String> getTokens() { return tokens; }
     public boolean getComment() { return comment; }
     public boolean getCommit() { return commit; }
     public int getPosition() { return position; }

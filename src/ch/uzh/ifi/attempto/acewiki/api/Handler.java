@@ -161,7 +161,13 @@ public class Handler {
             return ret;
         }
 
-        Candidates can = getCandidates(st.getStatement());
+        Candidates can;
+        if (st.getTokens() != null) {
+            can = getCandidates(st.getTokens());
+        }
+        else {
+            can = getCandidates(st.getStatement());
+        }
         ret.put("valid", can.valid);
         ret.put("complete", can.complete);
         ret.put("tokens", can.tokens);
@@ -240,6 +246,32 @@ public class Handler {
         }
     }
 
+    public synchronized Candidates getCandidates(List<String> tokens) {
+        LanguageHandler lh = engine.getLanguageHandler();
+        PredictiveParser pp = lh.getPredictiveParser();
+        pp.removeAllTokens();
+
+        List<String> list = new ArrayList(tokens);
+        Candidates ret = new Candidates();
+        while (list.size() > 0) {
+            String tok = list.remove(0);
+            if (!pp.isPossibleNextToken(tok)) {
+                break;
+            }
+            pp.addToken(tok);
+        }
+
+        ret.remain = "";
+        while (list.size() > 0) {
+            if (ret.remain.length() > 0) ret.remain += " ";
+            ret.remain += list.remove(0);
+        }
+
+        updateCandidates(pp, ret);
+
+        return ret;
+    }
+
     // synchronized
     public synchronized Candidates getCandidates(String text) {
         LanguageHandler lh = engine.getLanguageHandler();
@@ -264,15 +296,24 @@ public class Handler {
             }
         }
 
-        ret.tokens = pr.getTokens();
+        // after parseAsFarAsPossible, pp is still empty
+        pp.setTokens(pr.getTokens());
 
-        if (ret.remain.equals("")) {
-            ret.valid = true;
-            // after parseAsFarAsPossible, pp is still empty
-            pp.setTokens(ret.tokens);
-            ret.complete = pp.isComplete() && (ret.tokens.size() > 0);
+        updateCandidates(pp, ret);
 
-            if (!ret.complete) {
+        return ret;
+    }
+
+    // all tokens should already in pp, and tokens and remain
+    // are setted in can.
+    private void updateCandidates(PredictiveParser pp, Candidates can) {
+        can.tokens = pp.getTokens();
+
+        if (can.remain.equals("")) {
+            can.valid = true;
+            can.complete = pp.isComplete() && (can.tokens.size() > 0);
+
+            if (!can.complete) {
                 for (ConcreteOption o: pp.getNextTokenOptions().getConcreteOptions()) {
                     String cat = o.getCategoryName();
                     String word = o.getWord();
@@ -280,21 +321,18 @@ public class Handler {
                     if (cat == null) {
                         cat = "";
                     }
-                    if (ret.candidates.get(cat) == null) {
-                        ret.candidates.put(cat, new ArrayList<String>());
+                    if (can.candidates.get(cat) == null) {
+                        can.candidates.put(cat, new ArrayList<String>());
                     }
-                    ret.candidates.get(cat).add(word);
+                    can.candidates.get(cat).add(word);
                 }
             }
         }
         else {
-            ret.valid = false;
-            ret.complete = false;
+            can.valid = false;
+            can.complete = false;
         }
-
-        return ret;
     }
-
 
     private ParseResult parseAsFarAsPossible(PredictiveParser pp,
                                              ParseResult pr) {

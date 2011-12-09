@@ -172,7 +172,8 @@ public class RestServlet extends HttpServlet {
             return;
         }
 
-        if ((st == null) || (st.getStatement() == null)) {
+        if ((st == null) || ((st.getStatement() == null) &&
+                             st.getTokens() == null)) {
             output(resultError("missing statement."), res);
             return;
         }
