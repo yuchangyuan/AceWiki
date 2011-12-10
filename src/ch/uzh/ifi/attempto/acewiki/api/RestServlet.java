@@ -43,6 +43,8 @@ public class RestServlet extends HttpServlet {
     private Backend backend;
     private Gson gson;
 
+	private static final long serialVersionUID = 1358039576597838L;
+
     @SuppressWarnings("rawtypes")
         private Map<String, String> getInitParameters(ServletConfig config) {
 
@@ -109,7 +111,7 @@ public class RestServlet extends HttpServlet {
     }
 
     public ArrayList<String> splitPath(HttpServletRequest req) {
-        ArrayList<String> path = new ArrayList();
+        ArrayList<String> path = new ArrayList<String>();
         String pi = req.getPathInfo();
 
         if (pi != null) {

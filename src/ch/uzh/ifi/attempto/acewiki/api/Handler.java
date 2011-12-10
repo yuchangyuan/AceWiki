@@ -216,8 +216,8 @@ public class Handler {
         public List<String> getSubtokens() { return subtokens; }
 
         @Override public ParseResult clone() {
-            return new ParseResult(new ArrayList(tokens),
-                                   new ArrayList(subtokens));
+            return new ParseResult(new ArrayList<String>(tokens),
+                                   new ArrayList<String>(subtokens));
         }
     }
 
@@ -229,7 +229,7 @@ public class Handler {
 
         String remain = "";
 
-        List<String> list = new ArrayList(tokens);
+        List<String> list = new ArrayList<String>(tokens);
         while (list.size() > 0) {
             String tok = list.remove(0);
             if (!pp.isPossibleNextToken(tok)) {
@@ -290,7 +290,7 @@ public class Handler {
             ret.setComplete(pp.isComplete() && (ret.getTokens().size() > 0));
 
             if (!ret.isComplete()) {
-                Map<String, List<String>> can = new HashMap();
+                Map<String, List<String>> can = new HashMap<String, List<String>>();
                 for (ConcreteOption o: pp.getNextTokenOptions().getConcreteOptions()) {
                     String cat = o.getCategoryName();
                     String word = o.getWord();
@@ -319,15 +319,15 @@ public class Handler {
         String text = "";
 
         // find all candidates once, avoid re-cache of NextTokenOptions.
-        List<String> subtoks = new ArrayList(pr.getSubtokens());
+        List<String> subtoks = new ArrayList<String>(pr.getSubtokens());
         while (subtoks.size() > 0) {
             if (text.length() > 0) text += " ";
             text += subtoks.remove(0);
 
             if (opts.containsToken(text)) {
-                List<String> toks1 = new ArrayList(pr.getTokens());
+                List<String> toks1 = new ArrayList<String>(pr.getTokens());
                 toks1.add(text);
-                nextResultList.add(new ParseResult(toks1, new ArrayList(subtoks)));
+                nextResultList.add(new ParseResult(toks1, new ArrayList<String>(subtoks)));
             }
         }
 
