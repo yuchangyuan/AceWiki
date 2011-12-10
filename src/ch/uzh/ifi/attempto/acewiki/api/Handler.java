@@ -40,8 +40,10 @@ import ch.uzh.ifi.attempto.acewiki.core.Statement;
 import ch.uzh.ifi.attempto.acewiki.core.Comment;
 import ch.uzh.ifi.attempto.acewiki.core.Article;
 import ch.uzh.ifi.attempto.acewiki.core.Sentence;
+import ch.uzh.ifi.attempto.acewiki.core.Question;
 import ch.uzh.ifi.attempto.acewiki.core.LanguageHandler;
-
+import ch.uzh.ifi.attempto.acewiki.core.CachingReasoner;
+import ch.uzh.ifi.attempto.acewiki.core.AnswerElement;
 
 /**
  * This class is used by servlet to handle api call. The api is RESTful, use
@@ -346,6 +348,55 @@ public class Handler {
         }
 
         return pr1;
+    }
+
+    public RestArticleResult getArticle(long id, boolean includeAnswer) {
+        return getArticle(ontology.get(id), includeAnswer);
+    }
+
+    public RestArticleResult getArticle(String word, boolean includeAnswer) {
+        return getArticle(ontology.getElement(word), includeAnswer);
+    }
+
+    public RestArticleResult getArticle(OntologyElement oe, 
+                                        boolean includeAnswer) {
+        RestArticleResult ret = new RestArticleResult();
+        final CachingReasoner cr = ontology.getReasoner();
+
+        if (oe == null) {
+            ret.setError("no such article.");
+            return ret;
+        }
+
+        Article a = oe.getArticle();
+        List<Statement> stList = a.getStatements();
+        for (Statement st: stList) {
+            if (st instanceof Comment) {
+                ret.addComment(st.getText());
+            }
+            else if (st instanceof Question) {
+                Question q = (Question) st;
+                List<String> answers = null;
+                if (includeAnswer) {
+                    answers = new ArrayList<String>();
+                    List<AnswerElement> cachedAnswer = cr.getCachedAnswer(q);
+                    if (cachedAnswer == null || !cr.isCachedAnswerUpToDate(q)) {
+                        cachedAnswer = cr.getAnswer(q);
+                    }
+                    for (AnswerElement ae: cr.getAnswer(q)) {
+                        answers.add(ae.getAnswerText().getText());
+                    }
+                }
+                ret.addQuestion(q.getText(), q.isReasonable(), 
+                                q.isIntegrated(), answers);
+            }
+            else if (st instanceof Sentence) {
+                Sentence s = (Sentence) st;
+                ret.addSentence(s.getText(), s.isReasonable(), s.isIntegrated());
+            }
+        }
+
+        return ret;
     }
 }
 

@@ -134,7 +134,14 @@ public class RestServlet extends HttpServlet {
             json = handler.list(req.getParameter("search"));
             break;
         case 1:
-            // TODO;
+            boolean includeAnswer = "true".equals(req.getParameter("answer"));
+            String word = path.get(0);
+            if (word.matches("[0-9]+")) {
+                json = handler.getArticle(Long.parseLong(word), includeAnswer);
+            }
+            else {
+                json = handler.getArticle(word, includeAnswer);
+            }
             break;
         }
 
