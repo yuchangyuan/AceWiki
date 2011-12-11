@@ -16,30 +16,30 @@ package ch.uzh.ifi.attempto.acewiki.api;
 import java.util.*;
 
 public class RestArticleResult extends RestResult {
-    public static abstract class Statement {   
+    public static abstract class Statement {
         protected String type;
         protected String text;
-        
+
         public String getType() {
             return type;
         }
     }
-    
+
     public static class Comment extends Statement {
         public Comment() {
             this(null);
         }
 
-        public Comment(String text) {            
+        public Comment(String text) {
             this.type = "comment";
-            this.text = text; 
+            this.text = text;
         }
     }
-    
+
     public static class Sentence extends Statement {
         private boolean reasonable;
         private boolean integrated;
-        
+
         public Sentence() { this(null, false, false); }
         public Sentence(String text, boolean reasonable, boolean integrated) {
             this.type = "sentence";
@@ -48,10 +48,10 @@ public class RestArticleResult extends RestResult {
             this.integrated = integrated;
         }
     }
-    
+
     public static class Question extends Sentence {
         private List<String> answers;
-        
+
         public Question() { this(null, false, false, null); }
         public Question(String text, boolean reasonable, boolean integrated,
                         List<String> answers) {
@@ -60,23 +60,33 @@ public class RestArticleResult extends RestResult {
             this.type = "question";
         }
     }
-    
+
     private List<Statement> statements;
+    private List<String> words;
+    private List<String> headwords;
 
     public RestArticleResult() {
         statements = new ArrayList<Statement>();
+    }
+
+    public void setWords(List<String> words) {
+        this.words = words;
+    }
+
+    public void setHeadwords(List<String> headwords) {
+        this.headwords = headwords;
     }
 
     public void addComment(String text) {
         statements.add(new Comment(text));
     }
 
-    public void addSentence(String text, boolean reasonable, 
+    public void addSentence(String text, boolean reasonable,
                             boolean integrated) {
         statements.add(new Sentence(text, reasonable, integrated));
     }
 
-    public void addQuestion(String text, 
+    public void addQuestion(String text,
                             boolean reasonable, boolean integrated,
                             List<String> answers) {
         statements.add(new Question(text, reasonable, integrated, answers));

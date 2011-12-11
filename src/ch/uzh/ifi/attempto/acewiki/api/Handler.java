@@ -368,6 +368,9 @@ public class Handler {
             return ret;
         }
 
+        ret.setWords(new ArrayList<String>(Arrays.asList(oe.getWords())));
+        ret.setHeadwords(new ArrayList<String>(Arrays.asList(oe.getHeadwords())));
+
         Article a = oe.getArticle();
         List<Statement> stList = a.getStatements();
         for (Statement st: stList) {
