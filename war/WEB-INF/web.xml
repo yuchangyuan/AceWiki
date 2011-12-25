@@ -448,6 +448,17 @@
 
   </servlet>
   
+  <!--
+      JSON-RPC Servlet for first AceWiki
+  -->
+  <servlet>
+    <servlet-name>JsonRpc</servlet-name>
+    <servlet-class>ch.uzh.ifi.attempto.acewiki.jsonrpc.JsonRpcServlet</servlet-class>
+    <init-param>
+      <param-name>backend</param-name>
+      <param-value>AceWikiBackend</param-value>
+    </init-param>
+  </servlet>
   
   <!-- Mappings -->
 
@@ -514,4 +525,12 @@
     <url-pattern>/aceeditor/</url-pattern>
   </servlet-mapping>
   
+  <!--
+      This is the mapping for the JSON-RPC servlet.
+  -->
+  <servlet-mapping>
+    <servlet-name>JsonRpc</servlet-name>
+    <url-pattern>/acewiki/rpc/</url-pattern>
+  </servlet-mapping>
+
 </web-app>

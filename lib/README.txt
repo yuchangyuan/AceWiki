@@ -72,7 +72,7 @@ Echo 3.0.beta8 (build 2009-08-06)
   files:     Echo3_App.jar
              Echo3_WebContainer.jar
              Echo3_Extras_App.jar
-             Echo3_Extras_WebContainer.jar 
+             Echo3_Extras_WebContainer.jar
              Echo3_FileTransfer_App.jar
              Echo3_FileTransfer_Model.jar
              Echo3_FileTransfer_Receiver.jar
@@ -120,3 +120,16 @@ JPGF (2011-12-12)
   url:       http://www.grammaticalframework.org/android/
   copyright: ?
   licenses:  ?
+
+Jackson 1.7.9
+  files:     jackson-core-lgpl-1.7.9.jar
+             jackson-mapper-lgpl-1.7.9.jar
+  url:       http://jackson.codehaus.org
+  copyright: ?
+  licenses:  GNU Lesser General Public License (LGPL), Version 2.1 (see licenses/lgpl-2.1.txt)
+
+jsonrpc4j 0.18
+  files:     jsonrpc4j-0.18.jar
+  url:       https://code.google.com/p/jsonrpc4j/
+  copyright: ?
+  licenses:  MIT License
